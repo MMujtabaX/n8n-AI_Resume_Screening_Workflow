@@ -1,0 +1,306 @@
+{
+  "name": "AI Powered Resume Screening Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Job Application Form",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name"
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email"
+            },
+            {
+              "fieldLabel": "Position Applied For"
+            },
+            {
+              "fieldLabel": "Years of Experience",
+              "fieldType": "number"
+            },
+            {
+              "fieldLabel": "CV Upload",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "90f90020-d1c6-41f2-a8c7-121440e6f983",
+      "name": "On form submission",
+      "webhookId": "7e508e01-145a-494c-96f5-9bb1530f49eb"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "CV_Upload",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "068bc010-7e84-4ea6-94d9-17e01af52b07",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert HR recruiter. Analyze this CV for the position applied.\nRespond ONLY in this exact format:\n\nCANDIDATE: (full name)\nPOSITION: (position they applied for)\nEXPERIENCE_YEARS: (number)\nSKILLS_MATCH: High / Medium / Low\nEDUCATION_LEVEL: (highest degree)\nKEY_STRENGTHS: (2-3 bullet points)\nRED_FLAGS: (any concerns, or \"None\")\nHIRE_RECOMMENDATION: Yes / Maybe / No\nSCORE: (number out of 100)\nSUMMARY: (2 sentences max)\n\nPosition Applied: {{ $('On form submission').item.json['Position Applied For'] }}\nYears of Experience Claimed:{{ $('On form submission').item.json['Years of Experience'] }}\n\nCV Content:{{ $json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "0a60d501-0268-41ef-865a-c7b7d1a1f209",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        288,
+        208
+      ],
+      "id": "04dc5e13-92af-4372-afba-4b9476a79a93",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "0ZRNLDJMQxcifdqA",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb94ff39-ecc3-40ab-9973-0b27b952a147",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "=HIRE_RECOMMENDATION: Maybe",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "0214ef4d-2797-49b5-a75f-063cb18d8fee",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10rsfTEN9p6SPhC4SWhRkleqgW2G3OacnfH0zMw4rEo4",
+          "mode": "list",
+          "cachedResultName": "Untitled spreadsheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10rsfTEN9p6SPhC4SWhRkleqgW2G3OacnfH0zMw4rEo4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10rsfTEN9p6SPhC4SWhRkleqgW2G3OacnfH0zMw4rEo4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Name": "={{ $('On form submission').item.json['Full Name'] }}",
+            "Position": "={{ $('On form submission').item.json['Position Applied For'] }}",
+            "Email": "={{ $('On form submission').item.json.Email }}",
+            "Exp Years": "={{ $('On form submission').item.json['Years of Experience'] }}",
+            "Full Analysis": "={{ $('AI Agent').item.json.output }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Position",
+              "displayName": "Position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Exp Years",
+              "displayName": "Exp Years",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Full Analysis",
+              "displayName": "Full Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        -96
+      ],
+      "id": "a4ab9362-5200-4694-802d-16ace846d7cd",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "iVLZKaq5VZ2vs9zX",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "022939ec-15e1-42ad-b7b3-bee570831e47",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "87ef9072c5c740df6f73adf76c2ab1cf35a5e73e36818a388d0e376bc456a3ee"
+  },
+  "id": "wLFCWU91UDDpLU2v",
+  "tags": []
+}
